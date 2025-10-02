@@ -100,6 +100,45 @@ function main() {
   _show_location="${2:-true}"
   _location="$3"
 
+#get weather display
+display_weather()
+{
+  if $fahrenheit; then
+    display_weather='&u' # for USA system
+  else
+    display_weather='&m' # for metric system
+  fi
+  weather_information=$(fetch_weather_information $display_weather)
+  weather_information_c=$(fetch_weather_information '&m')
+
+  weather_condition=$(echo $weather_information | rev | cut -d ' ' -f2- | rev) # Sunny, Snow, etc
+  temperature=$(echo $weather_information | rev | cut -d ' ' -f 1 | rev) # +31°C, -3°F, etc
+  temperature_c=$(echo $weather_information_c | rev | cut -d ' ' -f 1 | rev) # +31°C, -3°F, etc
+  unicode=$(forecast_unicode $weather_condition)
+
+  temperature="${temperature} | ${temperature_c}"
+  echo "$unicode${temperature/+/}" # remove the plus sign to the temperature
+}
+
+forecast_unicode()
+{
+  weather_condition=$(echo $weather_condition | awk '{print tolower($0)}')
+
+  if [[ $weather_condition =~ 'snow' ]]; then
+    echo '❄ '
+  elif [[ (($weather_condition =~ 'rain') || ($weather_condition =~ 'shower')) ]]; then
+    echo '☂ '
+  elif [[ (($weather_condition =~ 'overcast') || ($weather_condition =~ 'cloud')) ]]; then
+    echo '☁ '
+  elif [[ $weather_condition = 'NA' ]]; then
+    echo ''
+  else
+    echo '☀ '
+  fi
+}
+
+main()
+{
   # process should be cancelled when session is killed
   if ! timeout 1 bash -c "</dev/tcp/wttr.in/443"; then
     printf 'Weather Unavailable\n'
